@@ -14,7 +14,7 @@ library(readr)
 library(dplyr)
 library(tidyverse)
 
-avesWallace <- read_csv("~/github/sdmWallace/avesWallace.csv")
+avesWallace <- read_csv("~/github/Wallace/avesWallace.csv")
 
 # Species: Bucephala albeola, Morus bassanus,Larus argentatus, Uria aalge,Larus glaucescens,
 # Melanitta perspicillata, Larus philadelphia, Puffinus gravis, Gavia stellata,
@@ -103,13 +103,15 @@ B.albeola <- avesWallace %>%
 write.csv(B.albeola,"./B_albeola.csv")
 
 
+# Subsample so Wallace will run in a reasonable amount of time
 total_samp <- nrow(P.urile)          #find total number of samples for subregion
-sub10 <- round(0.1*total_samp)       #number of values needed as a subsample 20% of the total sample
+sub10 <- round(0.1*total_samp)       #number of values needed as a subsample 10% of the total sample
 P.urile10 <- P.urile[sample(nrow(P.urile), sub10), ]
-write.csv(P.urile10,"./P_uril120.csv")
+write.csv(P.urile10,"./P_urile10.csv") #has 1000 records, 20% would have 2000 
+                                       #records, takes about an hour to run in 
+                                       #spatially thinning section of Wallace
 
-run_wallace() # Wallace is taking a ridiculous amount of time to run, perhaps I 
-# should just use maxent?
+run_wallace()
 
 # library(sdmpredictors)
 # datasets <- list_datasets(terrestrial = FALSE, marine = TRUE)
