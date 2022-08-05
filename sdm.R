@@ -1,4 +1,5 @@
-# Code written by Savannah Hartman for modeling for 20 most prevalent seabirds
+# Code written by Savannah Hartman for modeling for 20 most prevalent seabirds 
+# for winter 2018
 # Using Wallace for species distribution modelling
 
 install.packages("shiny")
@@ -6,111 +7,95 @@ install.packages("rgbif")
 install.packages("sdmpredictors")
 
 library(shiny)
-library(leaflet)
 library(wallace)
 library(rmarkdown)
-library(rgbif)
 library(readr)
 library(dplyr)
 library(tidyverse)
 
-avesWallace <- read_csv("~/github/Wallace/avesWallace.csv")
+avesWallace <- read_csv("C:/Users/savan/Documents/github/AvesOBIS/Aves2.csv")%>%
+  select(scientificName, decimalLongitude, decimalLatitude, season, date_year)%>%
+  filter(season == "Winter")
 
-# Species: Bucephala albeola, Morus bassanus,Larus argentatus, Uria aalge,Larus glaucescens,
-# Melanitta perspicillata, Larus philadelphia, Puffinus gravis, Gavia stellata,
-# Larus marinus, Oceanites oceanicus, Gavia immer, Alca torda, Puffinus griseus, 
-# Phalaropus fulicarius, Fulmarus glacialis, Mergus serrator, Aechmophorus occidentalis,
-# Calonectris diomedea, Phalacrocorax urile
+# Species: 
+# Alca torda and Clangula hyemalis
+# No need to remove duplicates, Wallace does that upon upload
 
-P.urile <- avesWallace %>%
-  filter(name == "Phalacrocorax urile")#20
-write.csv(P.urile,"./P_urile.csv")
+# Winter for all years to compare to seasonal map of each species, how accurate
+# will my sdm be?
 
-C.diomedea <- avesWallace %>% 
-  filter(name == "Calonectris diomedea") #19
-write.csv(C.diomedea,"./C_diomedea.csv")
+tordaWinter <- avesWallace %>%
+  select(scientificName,decimalLongitude,decimalLatitude)%>%
+  filter(scientificName == "Alca torda")
+names(tordaWinter) <- c('name','longitude','latitude')
+write.csv(tordaWinter,"./Atorda_winter.csv") #began thinning at 3:49 pm 6.9.22
 
-A.occidentalis <- avesWallace %>%
-  filter(name == "Aechmophorus occidentalis") #18
-write.csv(A.occidentalis,"./A_occidentalis.csv")
+hyemalisWinter <- avesWallace %>%
+  select(scientificName,decimalLongitude,decimalLatitude)%>%
+  filter(scientificName == "Clangula hyemalis")
+names(hyemalisWinter) <- c('name','longitude','latitude')
+write.csv(hyemalisWinter,"./Chyemalis_winter.csv")
 
-M.serrator <- avesWallace %>%
-  filter(name == "Mergus serrator") #17
-write.csv(M.serrator,"./M_serrator.csv")
+# Year 2018
+A.torda2018 <- avesWallace %>%
+  select(scientificName,decimalLongitude,decimalLatitude,date_year)%>%
+  filter(scientificName == "Alca torda", date_year =="2018") 
+names(A.torda2018) <- c('name','longitude','latitude','year')
+A.torda2018 <- subset(A.torda2018, select = -c(year))
+write.csv(A.torda2018,"./A_torda2018.csv")
+rm(A.torda)
 
-F.glacialis <- avesWallace %>%
-  filter(name == "Fulmarus glacialis") #16
-write.csv(F.glacialis,"./F_glacialis.csv")
+C.hyemalis2018 <- avesWallace %>%
+  select(scientificName,decimalLongitude,decimalLatitude,date_year)%>%
+  filter(scientificName == "Clangula hyemalis", date_year == "2018") 
+names(C.hyemalis2018) <- c('name','longitude','latitude','year')
+C.hyemalis2018 <- subset(C.hyemalis2018, select = -c(year))
+write.csv(C.hyemalis2018,"./C.hyemalis2018.csv") #adds unusable first column, rm manually
 
-P.fulicarius <- avesWallace %>%
-  filter(name == "Phalaropus fulicarius") #15
-write.csv(P.fulicarius,"./P_fulicarius.csv")
+#Years 2001, 2002, 2007, 2011, 2015, 2016, 2017 do not contain data for both species (also 
+# years of El Nino/La Nina - leave out for simplicity)
 
-P.griseus <- avesWallace %>%
-  filter(name == "Puffinus griseus") #14
-write.csv(P.griseus,"./P_griseus.csv")
+#Year 2003
+A.torda2003 <- avesWallace %>%
+  select(scientificName,decimalLongitude,decimalLatitude,date_year)%>%
+  filter(scientificName == "Alca torda", date_year =="2003") 
+names(A.torda2003) <- c('name','longitude','latitude','year')
+A.torda2003 <- subset(A.torda2003, select = -c(year))
+write.csv(A.torda2003,"./A_torda2003.csv")
 
-A.torda <- avesWallace %>%
-  filter(name == "Alca torda") #13
-write.csv(A.torda,"./A_torda.csv")
+C.hyemalis2003 <- avesWallace %>%
+  select(scientificName,decimalLongitude,decimalLatitude,date_year)%>%
+  filter(scientificName == "Clangula hyemalis", date_year == "2003") 
+names(C.hyemalis2003) <- c('name','longitude','latitude','year')
+C.hyemalis2003 <- subset(C.hyemalis2003, select = -c(year))
+write.csv(C.hyemalis2003,"./C.hyemalis2003.csv") #adds unusable first column, rm manually
 
-G.immer <- avesWallace %>%
-  filter(name == "Gavia immer") #12
-write.csv(G.immer,"./G_immer.csv")
+#Year 2004
+A.torda2004 <- avesWallace %>%
+  select(scientificName,decimalLongitude,decimalLatitude,date_year)%>%
+  filter(scientificName == "Alca torda", date_year =="2004") 
+names(A.torda2004) <- c('name','longitude','latitude','year')
+A.torda2004 <- subset(A.torda2004, select = -c(year))
+write.csv(A.torda2004,"./A_torda2004.csv")
 
-O.oceanicus <- avesWallace %>%
-  filter(name == "Oceanites oceanicus") #11
-write.csv(O.oceanicus,"./O_oceanicus.csv")
+C.hyemalis2004 <- avesWallace %>%
+  select(scientificName,decimalLongitude,decimalLatitude,date_year)%>%
+  filter(scientificName == "Clangula hyemalis", date_year == "2004") 
+names(C.hyemalis2004) <- c('name','longitude','latitude','year')
+C.hyemalis2004 <- subset(C.hyemalis2004, select = -c(year))
+write.csv(C.hyemalis2004,"./C.hyemalis2004.csv") #adds unusable first column, rm manually
 
-L.marinus <- avesWallace %>%
-  filter(name == "Larus marinus") #10
-write.csv(L.marinus,"./L_marinus.csv")
-
-G.stellata <- avesWallace %>%
-  filter(name == "Gavia stellata") #9
-write.csv(G.stellata,"./G_stellata.csv")
-
-P.gravis <- avesWallace %>%
-  filter(name == "Puffinus gravis") #8
-write.csv(P.gravis,"./P_gravis.csv")
-
-L.philadelphia <- avesWallace %>%
-  filter(name == "Larus philadelphia") #7
-write.csv(L.philadelphia,"./L_philadelphia.csv")
-
-M.perspicillata <- avesWallace %>%
-  filter(name == "Melanitta perspicillata") #6
-write.csv(M.perspicillata,"./M_perspicillata.csv")
-
-L.glaucescens <- avesWallace %>%
-  filter(name == "Larus glaucescens") #5
-write.csv(L.glaucescens,"./L_glaucescens.csv")
-
-U.aalge <- avesWallace %>%
-  filter(name == "Uria aalge") #4
-write.csv(U.aalge,"./U_aalge.csv")
-
-L.argentatus <- avesWallace %>%
-  filter(name == "Larus argentatus") #3
-write.csv(L.argentatus,"./L_argentatus.csv")
-
-M.bassanus <- avesWallace %>%
-  filter(name == "Morus bassanus") #2
-write.csv(M.bassanus,"./M_bassanus.csv")
-
-B.albeola <- avesWallace %>%
-  filter(name == "Bucephala albeola") #1
-write.csv(B.albeola,"./B_albeola.csv")
+#Year 2005
+#Year 2006
+#Year 2008
+#Year 2009
+#Year 2010
+#Year 2012
+#Year 2013
+#Year 2014
 
 
-# Subsample so Wallace will run in a reasonable amount of time
-total_samp <- nrow(P.urile)          #find total number of samples for subregion
-sub10 <- round(0.1*total_samp)       #number of values needed as a subsample 10% of the total sample
-P.urile10 <- P.urile[sample(nrow(P.urile), sub10), ]
-write.csv(P.urile10,"./P_urile10.csv") #has 1000 records, 20% would have 2000 
-                                       #records, takes about an hour to run in 
-                                       #spatially thinning section of Wallace
-
+# Run Wallace -------------------------------------------------------------
 run_wallace()
 
 # library(sdmpredictors)
