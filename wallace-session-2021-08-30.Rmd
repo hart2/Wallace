@@ -34,45 +34,50 @@ it is necessary to load the file `functions.R`, The function
 source(system.file('shiny/funcs', 'functions.R', package = 'wallace'))
 ```
 
-Record of analysis for *Phalacrocorax urile*.
----------------------------------------------
+Record of analysis for \*\*.
+----------------------------
 
-### Obtain Occurrence Data
-
-The search for occurrences was limited to 1000 records. Obtain
-occurrence records of the selected species from the gbif database.
+User CSV path with occurrence data. If the CSV file is not in the
+current workspace, change to the correct file path
+(e.g. “/Users/darwin/Documents/occs.csv”).
 
 ```{r}
-# # query selected database for occurrence records
-# results <- spocc::occ(query = "Phalacrocorax urile", from = "gbif", limit = 1000, has_coords = TRUE)
-# # retrieve data table from spocc object
-# results.data <- results[["gbif"]]$data[[formatSpName("Phalacrocorax urile")]]
-# # remove rows with duplicate coordinates
-# occs.dups <- duplicated(results.data[c('longitude', 'latitude')])
-# occs <- results.data[!occs.dups,]
-# # make sure latitude and longitude are numeric (sometimes they are characters)
-# occs$latitude <- as.numeric(occs$latitude)
-# occs$longitude <- as.numeric(occs$longitude)
-# # give all records a unique ID
-# occs$occID <- row.names(occs)
-P.urile10$latitude <- as.numeric(P.urile10$latitude)
-P.urile10$longitude <- as.numeric(P.urile10$longitude)
+# NOTE: provide the path to the folder that contains the CSV file
+d.occs <- 'C:/Users/savan/Documents/github/Wallace'
+# create path to user occurrences csv file
+userOccs.path <- file.path(d.occs, "tordaWinter.csv")
+# read in csv
+userOccs.csv <- read.csv(userOccs.path, header = TRUE)
+# remove rows with duplicate coordinates
+occs.dups <- duplicated(userOccs.csv[c('longitude', 'latitude')])
+occs <- userOccs.csv[!occs.dups,]
+# remove NAs
+occs <- occs[complete.cases(occs$longitude, occs$latitude), ]
+# give all records a unique ID
+occs$occID <- row.names(occs)
 ```
 
 ### Process Occurrence Data
 
-Spatial thinning selected. Thin distance selected is 10 km. 
-P.urile10 only has ~1000 occurrences.
+Remove the occurrence localities with the following IDs: 3.
 
 ```{r}
-output <- spThin::thin(P.urile10, 'latitude', 'longitude', 'name', thin.par = 10, reps = 100, locs.thinned.list.return = TRUE, write.files = FALSE, verbose = FALSE)
+# remove the rows that match the occIDs selected
+occs <- occs %>% filter(!(occID %in% 3))
+```
+
+Spatial thinning selected. Thin distance selected is 10 km. Takes a long time to run.
+Started at 10:45 am 6/10/2022 until (gave up at 9:30 pm, check in morning)
+
+```{r}
+output <- spThin::thin(occs, 'latitude', 'longitude', 'name', thin.par = 10, reps = 100, locs.thinned.list.return = TRUE, write.files = FALSE, verbose = FALSE)
 ```
 
 Since spThin did 100 iterations, there are 100 different variations of
 how it thinned your occurrence localities. As there is a stochastic
 element in the algorithm, some iterations may include more localities
 than the others, and we need to make sure we maximize the number of
-localities we proceed with.
+localities we proceed with. 
 
 ```{r}
 # find the iteration that returns the max number of occurrences
@@ -80,43 +85,44 @@ maxThin <- which(sapply(output, nrow) == max(sapply(output, nrow)))
 # if there's more than one max, pick the first one
 maxThin <- output[[ifelse(length(maxThin) > 1, maxThin[1], maxThin)]]  
 # subset occs to match only thinned occs
-occs <- P.urile10[as.numeric(rownames(maxThin)),]  
+occs <- occs[as.numeric(rownames(maxThin)),]  
 ```
 
 ### Obtain Environmental Data
+Change the varname of every nc to 'mean_count'? Can be done with: ncvar_rename( nc_open('Fe - Copy.nc',write=TRUE), 'fe', 'mean_count', verbose=FALSE )
 
 ```{r}
 # NOTE: provide the path to the folder that contains the rasters
-d.envs <- '~/github/Wallace/bio-oracle'
+d.envs <- 'C:/Users/savan/Documents/github/Wallace/copernicus'
 # create paths to the raster files
-userRas.paths <- file.path(d.envs, c('Present.Surface.Chlorophyll.Mean.tif', 'Present.Surface.Iron.Mean.tif', 'Present.Surface.Temperature.Max.tif', 'Present.Surface.Temperature.Mean.tif', 'Present.Surface.Temperature.Min.tif'))
-# make a RasterStack out of the raster files
-envs <- raster::stack(userRas.paths)
+userRas.paths <- file.path(d.envs, c('sst.nc', 'salinity.nc', 'mixedlayerthickness.nc', 'spco2.nc', 'si.nc', 'po4.nc', 'phyc.nc', 'ph.nc', 'o2.nc', 'nppv.nc', 'N03.nc', 'Fe.nc', 'chl_a.nc'))
+# make a RasterStack out of the raster files, need to select varname 'mean_count'
+envs <- raster::stack(userRas.paths) #problem child
 ```
 
 ### Process Environmental Data
 
-Background selection technique chosen as .
+Background selection technique chosen as Minimum Convex Polygon.
 
 ```{r}
-# make SpatialPoints object for buffering
 occs.xy <- occs[c('longitude', 'latitude')]
 sp::coordinates(occs.xy) <- ~ longitude + latitude
-bgExt <- occs.xy
+bgExt <- mcp(occs.xy)
 ```
 
-Buffer size of the study extent polygon defined as 0.5 degrees.
+Buffer size of the study extent polygon defined as 1 degrees.
 
 ```{r}
-bgExt <- rgeos::gBuffer(bgExt, width = 0.5)
+bgExt <- rgeos::gBuffer(bgExt, width = 1)
 ```
 
-Mask environmental variables by , and take a random sample of background
-values from the study extent. As the sample is random, your results may
-be different than those in the session. If there seems to be too much
-variability in these background samples, try increasing the number from
-10,000 to something higher (e.g. 50,000 or 100,000). The better your
-background sample, the less variability you’ll have between runs.
+Mask environmental variables by Minimum Convex Polygon, and take a
+random sample of background values from the study extent. As the sample
+is random, your results may be different than those in the session. If
+there seems to be too much variability in these background samples, try
+increasing the number from 10,000 to something higher (e.g. 50,000 or
+100,000). The better your background sample, the less variability you’ll
+have between runs.
 
 ```{r}
 # crop the environmental rasters by the background extent shape
@@ -124,7 +130,7 @@ envsBgCrop <- raster::crop(envs, bgExt)
 # mask the background extent shape from the cropped raster
 envsBgMsk <- raster::mask(envsBgCrop, bgExt)
 # sample random background points
-bg.xy <- dismo::randomPoints(envsBgMsk, 100000)
+bg.xy <- dismo::randomPoints(envsBgMsk, 10000)
 # convert matrix output to data frame
 bg.xy <- as.data.frame(bg.xy)  
 ```
@@ -145,12 +151,11 @@ independent of each other, which may or may not be a safe assumption for
 your dataset. Spatial partitioning is one way to ensure more
 independence between groups.
 
-You selected to partition your occurrence data by the method, aka nonspatial
-partitioning via k-fold (2 folds).
+You selected to partition your occurrence data by the method.
 
 ```{r}
 occs.xy <- occs[c('longitude', 'latitude')]
-group.data <- ENMeval::get.randomkfold(occ=occs.xy, bg.coords=bg.xy, kfolds=2)
+group.data <- ENMeval::get.jackknife(occ=occs.xy, bg.coords=bg.xy)
 ```
 
 ```{r}
@@ -167,8 +172,7 @@ You selected the maxent model.
 # define the vector of regularization multipliers to test
 rms <- seq(1, 2, 1)
 # iterate model building over all chosen parameter settings
-# L, LQ, H, LQH, LQHP are different feature combinations.
-e <- ENMeval::ENMevaluate(occs.xy, envsBgMsk, bg.coords = bg.xy, RMvalues = rms, fc = c('L', 'LQ', 'H','LQH','LQHP'), 
+e <- ENMeval::ENMevaluate(occs.xy, envsBgMsk, bg.coords = bg.xy, RMvalues = rms, fc = 'L', 
                           method = 'user', occs.grp, bg.grp, clamp = TRUE, algorithm = "maxnet")
 
 # unpack the results data frame, the list of models, and the RasterStack of raw predictions
@@ -180,7 +184,7 @@ evalPreds <- e@predictions
 
 ```{r}
 # view response curves for environmental variables with non-zero coefficients
-plot(evalMods[["LQHP_1"]], vars = c('Present.Surface.Chlorophyll.Mean', 'Present.Surface.Iron.Mean', 'Present.Surface.Temperature.Max', 'Present.Surface.Temperature.Mean', 'Present.Surface.Temperature.Min'), type = "cloglog")
+plot(evalMods[["L_2"]], vars = c('ph', 'nppv', 'Fe', 'chl_a'), type = "cloglog")
 ```
 
 ```{r}
@@ -190,21 +194,12 @@ ENMeval::eval.plot(evalTbl, value = "avg.test.AUC")
 
 ```{r}
 # Select your model from the models list
-mod <- evalMods[["LQHP_1"]]
+mod <- evalMods[["L_2"]]
 ```
 
 ```{r}
-# generate cloglog prediction
-pred <- ENMeval::maxnet.predictRaster(mod, envsBgMsk, type = 'cloglog', clamp = TRUE) 
-```
-
-```{r}
-# get predicted values for occurrence grid cells
-occPredVals <- raster::extract(pred, occs.xy)
-# define minimum training presence threshold
-thr <- thresh(occPredVals, "mtp")
-# threshold model prediction
-pred <- pred > thr
+# generate logistic prediction
+pred <- ENMeval::maxnet.predictRaster(mod, envsBgMsk, type = 'logistic', clamp = TRUE)
 ```
 
 ```{r}
@@ -220,7 +215,7 @@ Finally, predict suitability values for these new raster cells based on
 the model you selected.
 
 ```{r}
-projCoords <- data.frame(x = c(-137.6714, -123.6939, -117.4523, -118.9468, -111.7383, -121.5841, -137.6714), y = c(49.6335, 52.3434, 49.4624, 38.7815, 32.2797, 30.857, 49.6335))
+projCoords <- data.frame(x = c(-68.9399, -42.5672, -36.4135, -62.9621, -68.9399), y = c(69.4853, 69.3617, 55.3991, 50.9806, 69.4853))
 projPoly <- sp::SpatialPolygons(list(sp::Polygons(list(sp::Polygon(projCoords)), ID=1)))
 ```
 
@@ -233,16 +228,7 @@ based on the model selected.
 ```{r}
 predsProj <- raster::crop(envs, projPoly)
 predsProj <- raster::mask(predsProj, projPoly)
-proj <- ENMeval::maxnet.predictRaster(mod, predsProj, type = 'cloglog', clamp = TRUE)
-```
-
-```{r}
-# get predicted values for occurrence grid cells
-occPredVals <- raster::extract(pred, occs.xy)
-# define minimum training presence threshold
-thr <- thresh(occPredVals, "p10")
-# threshold model prediction
-proj <- proj > thr
+proj <- ENMeval::maxnet.predictRaster(mod, predsProj, type = 'logistic', clamp = TRUE)
 ```
 
 ```{r}
